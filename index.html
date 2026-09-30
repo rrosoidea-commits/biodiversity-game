@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Biodiversity or Threat?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --forest:#0F3D2E;
+    --forest-deep:#0A2A20;
+    --emerald:#2FA870;
+    --emerald-light:#B6E8CE;
+    --blue:#1B94B0;
+    --blue-light:#BFE7EF;
+    --sun:#F4C544;
+    --threat:#E2532D;
+    --threat-light:#FBD4C6;
+    --cream:#F6FAF6;
+    --ink:#0F241C;
+    --paper:#FFFFFF;
+    --font-display:'Poppins', system-ui, sans-serif;
+    --font-body:'Inter', system-ui, -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{ scroll-padding-top:env(safe-area-inset-top,0px); color-scheme:light; }
+  html,body{height:100%;}
+  body{
+    margin:0; font-family:var(--font-body); color:var(--ink);
+    background:
+      radial-gradient(60% 50% at 82% 8%, rgba(244,197,68,.35) 0%, rgba(244,197,68,0) 60%),
+      linear-gradient(190deg, #135A63 0%, #0F4A47 22%, #0F3D2E 55%, #0A2A20 100%);
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+    overflow:hidden; -webkit-tap-highlight-color:transparent;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
+  }
+
+  /* sun glow disc, tucked in the top corner behind the canopy */
+  .sun-glow{
+    position:absolute; top:-6vh; right:-4vw; width:34vh; height:34vh; border-radius:50%;
+    background:radial-gradient(circle, rgba(244,197,68,.55) 0%, rgba(244,197,68,0) 70%);
+    z-index:0; pointer-events:none; animation:pulseGlow 6s ease-in-out infinite;
+  }
+  @keyframes pulseGlow{ 0%,100%{ opacity:.75; } 50%{ opacity:1; } }
+
+  /* layered canopy silhouettes for jungle depth */
+  .canopy{ position:absolute; left:0; right:0; bottom:0; z-index:0; pointer-events:none; line-height:0; }
+  .canopy svg{ width:100%; height:auto; display:block; }
+  .canopy.back{ opacity:.55; transform:translateY(6%); }
+  .canopy.mid{ opacity:.8; transform:translateY(2%); }
+
+  /* drifting leaves, pure CSS shapes (no emoji) */
+  .leaf-field{ position:absolute; inset:0; overflow:hidden; z-index:0; pointer-events:none; }
+  .leaf{
+    position:absolute; width:26px; height:26px;
+    background:var(--emerald); opacity:.16;
+    border-radius:0 60% 0 60%;
+    animation: driftLeaf linear infinite;
+  }
+  @keyframes driftLeaf{
+    0%{ transform: translateY(-10vh) translateX(0) rotate(0deg); }
+    100%{ transform: translateY(115vh) translateX(6vw) rotate(340deg); }
+  }
+
+  /* fireflies: soft glowing dots that twinkle and float */
+  .firefly{
+    position:absolute; border-radius:50%; background:var(--sun);
+    box-shadow:0 0 8px 2px rgba(244,197,68,.8);
+    animation: twinkle ease-in-out infinite, floaty ease-in-out infinite;
+  }
+  @keyframes twinkle{ 0%,100%{ opacity:.15; } 50%{ opacity:.95; } }
+  @keyframes floaty{
+    0%{ transform:translate(0,0); } 33%{ transform:translate(1.4vw,-2vh); }
+    66%{ transform:translate(-1.2vw,1.6vh); } 100%{ transform:translate(0,0); }
+  }
+
+  /* birds drifting across the canopy */
+  .bird{ position:absolute; opacity:.5; animation: flyAcross linear infinite; z-index:0; pointer-events:none; }
+  .bird svg{ display:block; width:100%; height:100%; }
+  @keyframes flyAcross{
+    0%{ transform:translateX(-10vw) translateY(0); }
+    50%{ transform:translateX(55vw) translateY(-3vh); }
+    100%{ transform:translateX(115vw) translateY(1vh); }
+  }
+
+  #app{ position:relative; width:100%; height:100vh; height:100dvh; z-index:1; }
+
+  .screen{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding: max(2.2rem, env(safe-area-inset-top,0px)) 6vw max(2.6rem, env(safe-area-inset-bottom,0px));
+    opacity:0; pointer-events:none; transform:scale(.98);
+    transition: opacity .3s ease, transform .3s ease;
+    text-align:center;
+  }
+  .screen.active{ opacity:1; pointer-events:auto; transform:scale(1); }
+
+  /* ---- START SCREEN ---- */
+  .kicker{
+    font-family:var(--font-display); font-weight:700; letter-spacing:.02em; color:var(--sun);
+    font-size:clamp(.85rem,1.8vw,1.05rem); margin-bottom:.6rem;
+  }
+  h1{ font-family:var(--font-display); font-weight:800; color:var(--paper); margin:0 0 .5rem;
+      font-size:clamp(2.1rem,6.2vw,3.6rem); line-height:1.05; }
+  .subtitle{ color:var(--emerald-light); font-weight:600; font-size:clamp(1rem,2.4vw,1.3rem); max-width:620px; margin:0 auto 2rem; }
+  .rules{ display:flex; gap:1.1rem; flex-wrap:wrap; justify-content:center; max-width:640px; margin-bottom:2.2rem; }
+  .rule{
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.14); border-radius:14px;
+    padding:.9rem 1.2rem; color:var(--paper); font-weight:600; font-size:.9rem; min-width:150px;
+  }
+  .rule b{ display:block; font-family:var(--font-display); font-size:1.35rem; color:var(--sun); margin-bottom:.15rem; }
+  .big-btn{
+    font-family:var(--font-display); font-weight:800; font-size:clamp(1.05rem,2.6vw,1.35rem);
+    color:var(--forest-deep); background:var(--sun); border:none; border-radius:100px;
+    padding:1em 2.4em; cursor:pointer; box-shadow:0 6px 0 #C99A22;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .big-btn:active{ transform:translateY(4px); box-shadow:0 2px 0 #C99A22; }
+
+  /* ---- ROUND SCREEN ---- */
+  .hud{
+    position:absolute; top:max(1rem,env(safe-area-inset-top,0px)); left:6vw; right:6vw;
+    display:flex; align-items:center; justify-content:space-between; z-index:3;
+  }
+  .progress-wrap{ display:flex; align-items:center; gap:.6rem; }
+  .progress-label{ font-family:var(--font-display); font-weight:700; color:var(--paper); font-size:.85rem; white-space:nowrap; }
+  .progress-track{ width:min(38vw,220px); height:8px; background:rgba(255,255,255,.18); border-radius:100px; overflow:hidden; }
+  .progress-fill{ height:100%; background:var(--sun); width:0%; transition:width .35s ease; }
+  .score-chip{
+    font-family:var(--font-display); font-weight:800; color:var(--forest-deep); background:var(--paper);
+    border-radius:100px; padding:.4em 1em; font-size:.9rem; box-shadow:0 3px 0 rgba(0,0,0,.15);
+  }
+
+  .round-card{
+    background:var(--paper); border-radius:28px; width:min(560px,90vw);
+    padding: clamp(1.2rem,3vw,2rem); box-shadow:0 18px 0 rgba(0,0,0,.18);
+    display:flex; flex-direction:column; align-items:center;
+    position:relative; overflow:hidden;
+  }
+  .theme-tag{
+    font-family:var(--font-display); font-weight:700; font-size:.75rem; letter-spacing:.03em;
+    color:var(--forest); background:var(--emerald-light); padding:.35em 1em; border-radius:100px; margin-bottom:.8rem;
+  }
+  .art-frame{
+    width:100%; max-width:340px; aspect-ratio:4/3; border-radius:18px; overflow:hidden;
+    background:linear-gradient(160deg,var(--blue-light),var(--emerald-light)); margin-bottom:1rem;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .art-frame svg{ width:100%; height:100%; display:block; }
+  .scenario-text{ font-weight:700; font-size:clamp(1rem,2.4vw,1.25rem); color:var(--ink); max-width:440px; margin:0 0 1.3rem; }
+  .prompt-q{ font-family:var(--font-display); font-weight:700; color:var(--forest); font-size:.95rem; margin-bottom:.9rem; }
+
+  .choice-row{ display:flex; gap:.9rem; width:100%; max-width:440px; }
+  .choice-btn{
+    flex:1; font-family:var(--font-display); font-weight:800; font-size:clamp(.85rem,2vw,1.05rem);
+    padding:1em .6em; border-radius:16px; border:none; cursor:pointer; color:var(--paper);
+    transition: transform .1s ease, filter .15s ease;
+  }
+  .choice-btn:active{ transform:scale(.96); }
+  .choice-btn.protect{ background:var(--emerald); box-shadow:0 5px 0 #1F7A4F; }
+  .choice-btn.threat{ background:var(--threat); box-shadow:0 5px 0 #A63B1F; }
+  .choice-btn:disabled{ opacity:.55; cursor:default; }
+
+  .choice-icon{ display:block; margin:0 auto .35em; width:26px; height:26px; }
+
+  /* feedback overlay inside the card */
+  .feedback{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:1.6rem; opacity:0; pointer-events:none; transition:opacity .2s ease; text-align:center;
+  }
+  .feedback.show{ opacity:1; pointer-events:auto; }
+  .feedback.correct{ background:linear-gradient(160deg,#DFF5E7,#F3FCF6); }
+  .feedback.wrong{ background:linear-gradient(160deg,#FBDFD4,#FDF3EE); }
+  .verdict{
+    font-family:var(--font-display); font-weight:800; font-size:clamp(1.5rem,4vw,2.1rem);
+    margin-bottom:.4rem; animation: pop .35s ease;
+  }
+  .verdict.correct{ color:var(--emerald); }
+  .verdict.wrong{ color:var(--threat); }
+  @keyframes pop{ 0%{ transform:scale(.6); opacity:0; } 60%{ transform:scale(1.08); opacity:1;} 100%{ transform:scale(1);} }
+  .explain{ font-weight:700; color:var(--ink); font-size:clamp(.95rem,2.2vw,1.15rem); max-width:400px; margin-bottom:1.1rem; }
+  .advance-track{ width:min(220px,70%); height:6px; background:rgba(0,0,0,.1); border-radius:100px; overflow:hidden; margin-bottom:.6rem; }
+  .advance-fill{ height:100%; background:var(--forest); width:0%; }
+  .advance-fill.run{ animation: fillbar 2.1s linear forwards; }
+  @keyframes fillbar{ from{width:0%;} to{width:100%;} }
+  .skip-note{ font-size:.75rem; font-weight:700; color:#4b6357; }
+
+  .shake{ animation: shake .35s ease; }
+  @keyframes shake{ 0%,100%{transform:translateX(0);} 20%{transform:translateX(-8px);} 40%{transform:translateX(8px);} 60%{transform:translateX(-5px);} 80%{transform:translateX(5px);} }
+
+  /* ---- END SCREEN ---- */
+  .score-ring{
+    width:180px; height:180px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:var(--paper); box-shadow:0 10px 0 rgba(0,0,0,.18); margin-bottom:1.4rem;
+  }
+  .score-ring .num{ font-family:var(--font-display); font-weight:800; font-size:2.6rem; color:var(--forest); line-height:1; }
+  .score-ring .den{ font-family:var(--font-display); font-weight:700; font-size:1rem; color:#4b6357; }
+  .end-msg{ color:var(--paper); font-weight:700; font-size:clamp(1.05rem,2.6vw,1.4rem); max-width:520px; margin-bottom:1.8rem; }
+  .end-actions{ display:flex; gap:.8rem; flex-wrap:wrap; justify-content:center; }
+  .ghost-btn{
+    font-family:var(--font-display); font-weight:700; color:var(--paper); background:transparent;
+    border:2px solid rgba(255,255,255,.5); border-radius:100px; padding:.85em 1.8em; cursor:pointer; font-size:.95rem;
+  }
+
+  @media (max-width:520px){
+    .choice-row{ flex-direction:column; }
+    .round-card{ padding:1.1rem; }
+  }
+</style>
+</head>
+<body>
+<div class="sun-glow"></div>
+<div class="canopy back">
+  <svg viewBox="0 0 400 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 60 V38 Q10 20 20 34 Q30 10 42 30 Q54 14 66 32 Q78 16 90 33 Q102 12 116 31 Q130 18 144 32 Q158 10 172 30 Q186 20 200 33 Q214 10 228 30 Q242 18 256 32 Q270 12 284 31 Q298 20 312 33 Q326 10 340 30 Q354 18 368 32 Q382 14 394 28 Q398 30 400 34 V60 Z" fill="#0A2A20"/>
+  </svg>
+</div>
+<div class="canopy mid">
+  <svg viewBox="0 0 400 44" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 44 V26 Q8 8 18 22 Q26 4 36 20 Q46 6 56 21 Q66 4 76 20 Q86 8 96 22 Q106 4 116 20 Q126 8 136 22 Q146 4 156 20 Q166 8 176 22 Q186 4 196 20 Q206 8 216 22 Q226 4 236 20 Q246 8 256 22 Q266 4 276 20 Q286 8 296 22 Q306 4 316 20 Q326 8 336 22 Q346 4 356 20 Q366 8 376 22 Q386 6 394 18 Q398 22 400 26 V44 Z" fill="#0F3D2E"/>
+  </svg>
+</div>
+<div class="leaf-field" id="leafField"></div>
+<div id="app">
+
+  <!-- START -->
+  <section class="screen active" id="screen-start">
+    <div class="kicker">A quick-reaction class game</div>
+    <h1>Biodiversity or Threat?</h1>
+    <p class="subtitle">8 rounds. Read the scenario, then decide fast — does it protect biodiversity, or threaten it?</p>
+    <div class="rules">
+      <div class="rule"><b>8</b>rounds total</div>
+      <div class="rule"><b>2–3</b>minutes to finish</div>
+      <div class="rule"><b>2</b>choices per round</div>
+    </div>
+    <button class="big-btn" id="startBtn">Start Game</button>
+  </section>
+
+  <!-- ROUND TEMPLATE SCREEN (shared, content swapped by JS) -->
+  <section class="screen" id="screen-round">
+    <div class="hud">
+      <div class="progress-wrap">
+        <span class="progress-label" id="roundLabel">Round 1/8</span>
+        <span class="progress-track"><span class="progress-fill" id="progressFill"></span></span>
+      </div>
+      <span class="score-chip" id="scoreChip">Score: 0/8</span>
+    </div>
+
+    <div class="round-card" id="roundCard">
+      <span class="theme-tag" id="themeTag">Habitat Destruction</span>
+      <div class="art-frame" id="artFrame"></div>
+      <p class="scenario-text" id="scenarioText">Scenario text goes here.</p>
+      <p class="prompt-q">What do you think?</p>
+      <div class="choice-row">
+        <button class="choice-btn protect" id="btnProtect">
+          <svg class="choice-icon" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-4.5-7-10a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 5.5-7 10-7 10 0 0-2-.8-4-2Z" fill="white"/></svg>
+          Protect It
+        </button>
+        <button class="choice-btn threat" id="btnThreat">
+          <svg class="choice-icon" viewBox="0 0 24 24" fill="none"><path d="M12 2 2 21h20L12 2Z" fill="white"/><rect x="11" y="9" width="2" height="6" fill="#E2532D"/><rect x="11" y="16.5" width="2" height="2" fill="#E2532D"/></svg>
+          Threat
+        </button>
+      </div>
+
+      <div class="feedback" id="feedback">
+        <div class="verdict" id="verdictText">Correct!</div>
+        <p class="explain" id="explainText">Explanation goes here.</p>
+        <div class="advance-track"><div class="advance-fill" id="advanceFill"></div></div>
+        <span class="skip-note">Tap anywhere to continue</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- END -->
+  <section class="screen" id="screen-end">
+    <div class="score-ring">
+      <span class="num" id="finalScoreNum">0</span>
+      <span class="den">out of 8</span>
+    </div>
+    <p class="end-msg" id="endMessage">Great job! You know your biodiversity threats.</p>
+    <div class="end-actions">
+      <button class="big-btn" id="playAgainBtn">Play Again</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  // ---------- background drifting leaves ----------
+  var leafField = document.getElementById('leafField');
+  for(var i=0;i<14;i++){
+    var l = document.createElement('span');
+    l.className = 'leaf';
+    l.style.left = (Math.random()*100) + 'vw';
+    l.style.top = (-10 - Math.random()*30) + 'vh';
+    l.style.width = l.style.height = (14 + Math.random()*18) + 'px';
+    l.style.animationDuration = (14 + Math.random()*14) + 's';
+    l.style.animationDelay = (-Math.random()*20) + 's';
+    l.style.background = (i % 3 === 0) ? 'var(--blue)' : (i % 3 === 1 ? 'var(--emerald)' : 'var(--sun)');
+    leafField.appendChild(l);
+  }
+
+  // ---------- fireflies ----------
+  for(var f=0; f<10; f++){
+    var fly = document.createElement('span');
+    fly.className = 'firefly';
+    var size = 3 + Math.random()*4;
+    fly.style.width = fly.style.height = size + 'px';
+    fly.style.left = (Math.random()*96) + 'vw';
+    fly.style.top = (20 + Math.random()*70) + 'vh';
+    fly.style.animationDuration = (2.4 + Math.random()*2.4) + 's, ' + (6 + Math.random()*6) + 's';
+    fly.style.animationDelay = (-Math.random()*4) + 's, ' + (-Math.random()*6) + 's';
+    leafField.appendChild(fly);
+  }
+
+  // ---------- distant birds ----------
+  var birdSvg = '<svg viewBox="0 0 32 16" xmlns="http://www.w3.org/2000/svg"><path d="M0 8 Q8 -2 16 8 Q24 -2 32 8" fill="none" stroke="#DDEFE6" stroke-width="2" stroke-linecap="round"/></svg>';
+  for(var b=0; b<3; b++){
+    var bird = document.createElement('span');
+    bird.className = 'bird';
+    bird.style.width = (22 + Math.random()*14) + 'px';
+    bird.style.height = '14px';
+    bird.style.top = (8 + Math.random()*24) + 'vh';
+    bird.style.animationDuration = (16 + Math.random()*10) + 's';
+    bird.style.animationDelay = (-Math.random()*20) + 's';
+    bird.innerHTML = birdSvg;
+    leafField.appendChild(bird);
+  }
+
+  // ---------- SVG illustrations per round ----------
+  var ART = {
+    habitatDestruction: '<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">'+
+      '<rect width="200" height="150" fill="#BFE7EF"/>'+
+      '<rect x="0" y="100" width="200" height="50" fill="#8A6A46"/>'+
+      '<circle cx="40" cy="70" r="26" fill="#2FA870"/><rect x="34" y="90" width="12" height="24" fill="#7A5A3A"/>'+
+      '<circle cx="80" cy="60" r="30" fill="#2FA870"/><rect x="73" y="86" width="14" height="28" fill="#7A5A3A"/>'+
+      '<g transform="translate(120,95) rotate(12)"><rect x="0" y="0" width="70" height="10" fill="#7A5A3A"/><circle cx="70" cy="5" r="16" fill="#2FA870" opacity="0.55"/></g>'+
+      '<rect x="140" y="105" width="46" height="26" rx="4" fill="#E2532D"/><rect x="182" y="112" width="14" height="14" fill="#E2532D"/>'+
+      '<circle cx="150" cy="115" r="6" fill="#3A2A1E"/><circle cx="176" cy="115" r="6" fill="#3A2A1E"/>'+
+      '<polygon points="140,105 150,90 175,90 186,105" fill="#F4C544"/>'+
+      '</svg>',
+    invasiveCheckpoint: '<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">'+
+      '<rect width="200" height="150" fill="#B6E8CE"/>'+
+      '<rect x="60" y="40" width="80" height="70" rx="8" fill="#FFFFFF" stroke="#0F3D2E" stroke-width="4"/>'+
+      '<circle cx="100" cy="75" r="26" fill="#F6FAF6"/>'+
+      '<path d="M85 70 q15 -18 30 0 q-15 22 -30 0 Z" fill="#8A6A46"/>'+
+      '<circle cx="88" cy="70" r="2.4" fill="#2A1E12"/><circle cx="112" cy="70" r="2.4" fill="#2A1E12"/>'+
+      '<line x1="70" y1="55" x2="130" y2="95" stroke="#E2532D" stroke-width="6"/>'+
+      '<circle cx="100" cy="75" r="34" fill="none" stroke="#E2532D" stroke-width="6"/>'+
+      '<rect x="30" y="118" width="140" height="10" fill="#0F3D2E"/>'+
+      '</svg>',
+    geneticPollution: '<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">'+
+      '<rect width="200" height="150" fill="#BFE7EF"/>'+
+      '<path d="M0 110 Q50 95 100 110 T200 110 V150 H0 Z" fill="#1B94B0"/>'+
+      '<circle cx="55" cy="55" r="30" fill="none" stroke="#0F3D2E" stroke-width="4"/>'+
+      '<circle cx="55" cy="55" r="30" fill="#2FA870" opacity="0.18"/>'+
+      '<ellipse cx="45" cy="55" rx="9" ry="5" fill="#F4C544"/><polygon points="54,55 62,50 62,60" fill="#F4C544"/>'+
+      '<ellipse cx="66" cy="45" rx="9" ry="5" fill="#F4C544"/><polygon points="75,45 83,40 83,50" fill="#F4C544"/>'+
+      '<path d="M84 45 C120 55 140 80 150 100" stroke="#E2532D" stroke-width="3" fill="none" stroke-dasharray="6 5"/>'+
+      '<polygon points="150,100 142,93 152,90" fill="#E2532D"/>'+
+      '<ellipse cx="150" cy="115" rx="10" ry="6" fill="#0F3D2E"/><polygon points="160,115 168,110 168,120" fill="#0F3D2E"/>'+
+      '</svg>',
+    marineReserve: '<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">'+
+      '<rect width="200" height="150" fill="#1B94B0"/>'+
+      '<circle cx="100" cy="75" r="38" fill="#F6FAF6" stroke="#0F3D2E" stroke-width="5"/>'+
+      '<line x1="70" y1="45" x2="130" y2="105" stroke="#0F3D2E" stroke-width="5"/>'+
+      '<ellipse cx="100" cy="75" rx="14" ry="8" fill="#2FA870"/><polygon points="114,75 126,68 126,82" fill="#2FA870"/>'+
+      '<ellipse cx="35" cy="40" rx="10" ry="6" fill="#F4C544"/><polygon points="45,40 55,35 55,45" fill="#F4C544"/>'+
+      '<ellipse cx="30" cy="110" rx="9" ry="5" fill="#F4C544"/><polygon points="39,110 48,105 48,115" fill="#F4C544"/>'+
+      '<ellipse cx="165" cy="35" rx="9" ry="5" fill="#F4C544"/><polygon points="174,35 183,30 183,40" fill="#F4C544"/>'+
+      '<ellipse cx="168" cy="115" rx="11" ry="6" fill="#F4C544"/><polygon points="179,115 189,109 189,121" fill="#F4C544"/>'+
+      '</svg>',
+    monoculture: '<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">'+
+      '<rect width="200" height="150" fill="#BFE7EF"/>'+
+      '<rect y="60" width="200" height="90" fill="#F4C544"/>'+
+      '<g stroke="#C99A22" stroke-width="2">'+
+        '<line x1="10" y1="70" x2="10" y2="150"/><line x1="24" y1="70" x2="24" y2="150"/><line x1="38" y1="70" x2="38" y2="150"/>'+
+        '<line x1="52" y1="70" x2="52" y2="150"/><line x1="66" y1="70" x2="66" y2="150"/><line x1="80" y1="70" x2="80" y2="150"/>'+
+        '<line x1="94" y1="70" x2="94" y2="150"/><line x1="108" y1="70" x2="108" y2="150"/><line x1="122" y1="70" x2="122" y2="150"/>'+
+        '<line x1="136" y1="70" x2="136" y2="150"/><line x1="150" y1="70" x2="150" y2="150"/><line x1="164" y1="70" x2="164" y2="150"/>'+
+        '<line x1="178" y1="70" x2="178" y2="150"/><line x1="192" y1="70" x2="192" y2="150"/>'+
+      '</g>'+
+      '<rect x="4" y="60" width="34" height="26" fill="#F6FAF6" opacity=".85"/>'+
+      '<circle cx="12" cy="70" r="4" fill="#E2532D"/><circle cx="20" cy="74" r="4" fill="#2FA870"/><circle cx="28" cy="69" r="4" fill="#1B94B0"/>'+
+      '</svg>',
+    climateChange: '<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">'+
+      '<rect width="200" height="150" fill="#BFE7EF"/>'+
+      '<rect x="30" y="100" width="140" height="50" fill="#1B94B0" opacity=".5"/>'+
+      '<path d="M60 100 q10 -30 0 -55 q10 20 20 0 q6 25 0 55 Z" fill="#F6FAF6" stroke="#0F3D2E" stroke-width="3"/>'+
+      '<path d="M110 100 q8 -22 0 -40 q8 15 16 0 q4 18 0 40 Z" fill="#E2A78A"/>'+
+      '<rect x="152" y="35" width="14" height="60" rx="7" fill="#F6FAF6" stroke="#0F3D2E" stroke-width="3"/>'+
+      '<circle cx="159" cy="100" r="12" fill="#E2532D"/>'+
+      '<rect x="155" y="55" width="8" height="45" fill="#E2532D"/>'+
+      '<line x1="172" y1="45" x2="182" y2="45" stroke="#0F3D2E" stroke-width="2"/>'+
+      '<line x1="172" y1="60" x2="182" y2="60" stroke="#0F3D2E" stroke-width="2"/>'+
+      '<line x1="172" y1="75" x2="182" y2="75" stroke="#0F3D2E" stroke-width="2"/>'+
+      '</svg>',
+    diseaseCheck: '<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">'+
+      '<rect width="200" height="150" fill="#B6E8CE"/>'+
+      '<ellipse cx="90" cy="90" rx="36" ry="26" fill="#F6FAF6" stroke="#0F3D2E" stroke-width="4"/>'+
+      '<circle cx="120" cy="70" r="14" fill="#F6FAF6" stroke="#0F3D2E" stroke-width="4"/>'+
+      '<circle cx="125" cy="66" r="2.4" fill="#0F3D2E"/>'+
+      '<polygon points="132,64 142,58 138,70" fill="#F6FAF6" stroke="#0F3D2E" stroke-width="3"/>'+
+      '<g transform="translate(140,95) rotate(-30)">'+
+        '<rect x="0" y="0" width="8" height="34" rx="2" fill="#1B94B0"/>'+
+        '<rect x="-2" y="30" width="12" height="8" rx="2" fill="#1B94B0"/>'+
+        '<rect x="-3" y="-8" width="14" height="10" rx="2" fill="#0F3D2E"/>'+
+        '<rect x="2" y="-16" width="4" height="10" fill="#0F3D2E"/><rect x="-2" y="-13" width="12" height="4" fill="#0F3D2E"/>'+
+      '</g>'+
+      '<circle cx="45" cy="55" r="16" fill="#2FA870"/><path d="M38 55 l5 5 10 -10" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'+
+      '</svg>',
+    overpopulation: '<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">'+
+      '<rect width="200" height="150" fill="#BFE7EF"/>'+
+      '<circle cx="40" cy="70" r="24" fill="#2FA870"/><rect x="34" y="90" width="12" height="30" fill="#7A5A3A"/>'+
+      '<circle cx="70" cy="85" r="18" fill="#2FA870"/><rect x="65" y="100" width="10" height="24" fill="#7A5A3A"/>'+
+      '<rect x="0" y="124" width="200" height="26" fill="#8A6A46"/>'+
+      '<rect x="95" y="70" width="26" height="54" fill="#F6FAF6" stroke="#0F3D2E" stroke-width="2"/>'+
+      '<rect x="125" y="50" width="26" height="74" fill="#E9EDEA" stroke="#0F3D2E" stroke-width="2"/>'+
+      '<rect x="155" y="30" width="30" height="94" fill="#F6FAF6" stroke="#0F3D2E" stroke-width="2"/>'+
+      '<g fill="#1B94B0">'+
+        '<rect x="100" y="78" width="6" height="6"/><rect x="110" y="78" width="6" height="6"/><rect x="100" y="92" width="6" height="6"/><rect x="110" y="92" width="6" height="6"/>'+
+        '<rect x="131" y="58" width="6" height="6"/><rect x="141" y="58" width="6" height="6"/><rect x="131" y="72" width="6" height="6"/><rect x="141" y="72" width="6" height="6"/><rect x="131" y="86" width="6" height="6"/><rect x="141" y="86" width="6" height="6"/>'+
+        '<rect x="161" y="38" width="6" height="6"/><rect x="171" y="38" width="6" height="6"/><rect x="161" y="52" width="6" height="6"/><rect x="171" y="52" width="6" height="6"/><rect x="161" y="66" width="6" height="6"/><rect x="171" y="66" width="6" height="6"/>'+
+      '</g>'+
+      '</svg>'
+  };
+
+  // ---------- round data ----------
+  var ROUNDS = [
+    { theme:'Habitat Destruction', art:'habitatDestruction',
+      scenario:'A bulldozer is clearing a stretch of rainforest to make way for a new plantation.',
+      correct:'threat', explain:'Habitat destruction removes the natural homes species depend on — one of the biggest drivers of biodiversity loss.' },
+    { theme:'Invasive Species', art:'invasiveCheckpoint',
+      scenario:'Port officials are inspecting cargo and stopping a foreign insect from entering the country.',
+      correct:'protect', explain:'Biosecurity checkpoints prevent invasive species from reaching new ecosystems, where they could out-compete native species.' },
+    { theme:'Genetic Pollution', art:'geneticPollution',
+      scenario:'Farmed fish escape their pens and begin breeding with wild fish in the river downstream.',
+      correct:'threat', explain:'Genetic pollution from escaped farmed stock can dilute the unique gene pool of wild populations, especially rare ones.' },
+    { theme:'Over-Exploitation', art:'marineReserve',
+      scenario:'A no-take marine reserve keeps boats out, and fish populations inside are recovering.',
+      correct:'protect', explain:'Protected areas let over-exploited populations rebuild instead of being harvested faster than they can reproduce.' },
+    { theme:'Hybridization in Agriculture', art:'monoculture',
+      scenario:'A single high-yield hybrid crop now covers a huge field that once grew many local varieties.',
+      correct:'threat', explain:'Green Revolution-style monocultures boost yield but erode the genetic diversity of traditional crop varieties.' },
+    { theme:'Climate Change', art:'climateChange',
+      scenario:'Rising temperatures are melting glacier ice while nearby coral turns pale and bleached.',
+      correct:'threat', explain:'Climate change shifts temperatures and acidifies oceans, stressing ecosystems from polar ice to coral reefs.' },
+    { theme:'Spread of Diseases', art:'diseaseCheck',
+      scenario:'A wildlife vet gives a checkup and vaccination to animals in a rescue sanctuary.',
+      correct:'protect', explain:'Health screening and vaccination programs help stop disease from spreading through vulnerable wildlife populations.' },
+    { theme:'Human Population Growth', art:'overpopulation',
+      scenario:'A growing city keeps expanding its housing blocks further into what used to be forest edge.',
+      correct:'threat', explain:'Population growth drives demand for land and resources, fueling nearly every other threat to biodiversity.' }
+  ];
+
+  // ---------- state ----------
+  var idx = 0, score = 0, answered = false, advanceTimer = null;
+
+  var screens = {
+    start: document.getElementById('screen-start'),
+    round: document.getElementById('screen-round'),
+    end: document.getElementById('screen-end')
+  };
+  function showScreen(name){
+    Object.keys(screens).forEach(function(k){ screens[k].classList.toggle('active', k===name); });
+  }
+
+  var roundLabel = document.getElementById('roundLabel');
+  var progressFill = document.getElementById('progressFill');
+  var scoreChip = document.getElementById('scoreChip');
+  var themeTag = document.getElementById('themeTag');
+  var artFrame = document.getElementById('artFrame');
+  var scenarioText = document.getElementById('scenarioText');
+  var btnProtect = document.getElementById('btnProtect');
+  var btnThreat = document.getElementById('btnThreat');
+  var feedback = document.getElementById('feedback');
+  var verdictText = document.getElementById('verdictText');
+  var explainText = document.getElementById('explainText');
+  var advanceFill = document.getElementById('advanceFill');
+  var roundCard = document.getElementById('roundCard');
+
+  function loadRound(i){
+    answered = false;
+    var r = ROUNDS[i];
+    roundLabel.textContent = 'Round ' + (i+1) + '/' + ROUNDS.length;
+    progressFill.style.width = (i / ROUNDS.length * 100) + '%';
+    scoreChip.textContent = 'Score: ' + score + '/' + ROUNDS.length;
+    themeTag.textContent = r.theme;
+    artFrame.innerHTML = ART[r.art];
+    scenarioText.textContent = r.scenario;
+    btnProtect.disabled = false;
+    btnThreat.disabled = false;
+    feedback.classList.remove('show','correct','wrong');
+    feedback.style.pointerEvents = 'none';
+    advanceFill.classList.remove('run');
+    advanceFill.style.width = '0%';
+  }
+
+  function answer(choice){
+    if(answered) return;
+    answered = true;
+    var r = ROUNDS[idx];
+    var isCorrect = choice === r.correct;
+    if(isCorrect) score++;
+    btnProtect.disabled = true;
+    btnThreat.disabled = true;
+    scoreChip.textContent = 'Score: ' + score + '/' + ROUNDS.length;
+    progressFill.style.width = ((idx+1) / ROUNDS.length * 100) + '%';
+
+    verdictText.textContent = isCorrect ? 'Correct!' : 'Not quite!';
+    verdictText.className = 'verdict ' + (isCorrect ? 'correct' : 'wrong');
+    explainText.textContent = r.explain;
+    feedback.className = 'feedback show ' + (isCorrect ? 'correct' : 'wrong');
+    feedback.style.pointerEvents = 'auto';
+
+    if(!isCorrect){
+      roundCard.classList.add('shake');
+      setTimeout(function(){ roundCard.classList.remove('shake'); }, 400);
+    }
+
+    advanceFill.classList.add('run');
+    advanceTimer = setTimeout(next, 2200);
+  }
+
+  function next(){
+    clearTimeout(advanceTimer);
+    if(idx < ROUNDS.length - 1){
+      idx++;
+      loadRound(idx);
+      showScreen('round');
+    } else {
+      finish();
+    }
+  }
+
+  feedback.addEventListener('click', function(){
+    if(answered) next();
+  });
+
+  btnProtect.addEventListener('click', function(){ answer('protect'); });
+  btnThreat.addEventListener('click', function(){ answer('threat'); });
+
+  function finish(){
+    document.getElementById('finalScoreNum').textContent = score;
+    var msg;
+    if(score === ROUNDS.length) msg = 'Perfect score! You clearly know your biodiversity threats and conservation actions.';
+    else if(score >= ROUNDS.length - 2) msg = 'Great job! You know your biodiversity threats.';
+    else if(score >= ROUNDS.length / 2) msg = 'Solid effort — a quick review of the 8 threats will make you unstoppable.';
+    else msg = 'Good try! Let\'s go over the 8 threats to biodiversity again.';
+    document.getElementById('endMessage').textContent = msg;
+    showScreen('end');
+  }
+
+  document.getElementById('startBtn').addEventListener('click', function(){
+    idx = 0; score = 0;
+    loadRound(0);
+    showScreen('round');
+  });
+
+  document.getElementById('playAgainBtn').addEventListener('click', function(){
+    idx = 0; score = 0;
+    loadRound(0);
+    showScreen('round');
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(!screens.round.classList.contains('active')) return;
+    if(answered){ if(e.key === 'Enter' || e.key === ' ') next(); return; }
+    if(e.key === 'ArrowLeft' || e.key.toLowerCase() === 'p') answer('protect');
+    if(e.key === 'ArrowRight' || e.key.toLowerCase() === 't') answer('threat');
+  });
+})();
+</script>
+</body>
+</html>
